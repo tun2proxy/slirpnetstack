@@ -18,5 +18,11 @@ jobs:
           check-latest: true
           go-version-file: 'go.mod'
 
+      # cf. https://ubuntu.com/blog/ubuntu-23-10-restricted-unprivileged-user-namespaces
+      - name: Allow Unconfined NS
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_unconfined=0
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Run Tests
         run: make test
