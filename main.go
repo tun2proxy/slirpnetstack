@@ -353,12 +353,10 @@ func Main(programName string, args []string) int {
 	}
 
 	for {
-		select {
-		case sig := <-sigCh:
-			signal.Reset(sig)
-			fmt.Fprintf(os.Stderr, "[-] #%d Slirpnetstack closing\n", pid)
-			goto stop
-		}
+		sig := <-sigCh
+		signal.Reset(sig)
+		fmt.Fprintf(os.Stderr, "[-] #%d Slirpnetstack closing\n", pid)
+		goto stop
 	}
 stop:
 	// TODO: define semantics of graceful close on signal

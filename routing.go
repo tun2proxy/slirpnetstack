@@ -54,7 +54,7 @@ func UdpRoutingHandler(s *stack.Stack, state *State) func(*udp.ForwarderRequest)
 		}
 
 		rf, ok := state.remoteUdpFwd[loc.String()]
-		if ok == false {
+		if !ok {
 			if block := FirewallRoutingBlock(state, loc); block {
 				ep.Close()
 				return
@@ -88,7 +88,7 @@ func TcpRoutingHandler(state *State) func(*tcp.ForwarderRequest) {
 		}
 
 		rf, ok := state.remoteTcpFwd[loc.String()]
-		if ok == false {
+		if !ok {
 			if block := FirewallRoutingBlock(state, loc); block {
 				// In theory we could pass a bit of
 				// data to the guest here. Like:

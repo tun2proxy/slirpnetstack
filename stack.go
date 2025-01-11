@@ -126,7 +126,7 @@ func NewStack(rcvBufferSize, sndBufferSize int) *stack.Stack {
 	return s
 }
 
-func createLinkEP(s *stack.Stack, tunFd int, tapMode bool, macAddress net.HardwareAddr, tapMtu uint32) (stack.LinkEndpoint, error) {
+func createLinkEP(_ *stack.Stack, tunFd int, tapMode bool, macAddress net.HardwareAddr, tapMtu uint32) (stack.LinkEndpoint, error) {
 	parms := fdbased.Options{FDs: []int{tunFd},
 		MTU:               tapMtu,
 		RXChecksumOffload: true,
@@ -227,9 +227,7 @@ func GonetDialTCP(s *stack.Stack, laddr, raddr *tcpip.FullAddress, network tcpip
 
 	err = ep.Connect(*raddr)
 	if _, ok := err.(*tcpip.ErrConnectStarted); ok {
-		select {
-		case <-notifyCh:
-		}
+		<-notifyCh
 
 		err = ep.LastError()
 	}

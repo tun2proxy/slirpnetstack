@@ -100,7 +100,7 @@ func ParseDefAddress(ipS string, portS string) (_da *defAddress, _err error) {
 func (da *defAddress) Retrieve() *tcpip.FullAddress {
 	da.Lock()
 	defer da.Unlock()
-	if da.label == "" || time.Now().Sub(da.fetched) <= dnsTTL {
+	if da.label == "" || time.Since(da.fetched) <= dnsTTL {
 		return &da.static
 	}
 	da.fetched = time.Now()
@@ -165,7 +165,7 @@ func simpleLookupHost(resolver *net.Resolver, label string) (net.IP, error) {
 		return nil, err
 	}
 	if len(addrs) < 1 {
-		return nil, fmt.Errorf("Empty dns reponse for %q", label)
+		return nil, fmt.Errorf("empty dns reponse for %q", label)
 	}
 
 	// prefer IPv4. No real reason.
@@ -178,7 +178,7 @@ func simpleLookupHost(resolver *net.Resolver, label string) (net.IP, error) {
 
 	ip := netParseIP(addrs[0])
 	if ip == nil {
-		return nil, fmt.Errorf("Empty dns reponse for %q", label)
+		return nil, fmt.Errorf("empty dns reponse for %q", label)
 	}
 	return ip, nil
 }
@@ -189,7 +189,7 @@ func FullResolve(label string) (net.IP, uint16, error) {
 	if len(p) == 2 {
 		srvQuery, dnsSrv := p[0], p[1]
 		if !strings.HasPrefix(dnsSrv, "srv-") {
-			return nil, 0, fmt.Errorf("Unknown dns type %q", dnsSrv)
+			return nil, 0, fmt.Errorf("unknown dns type %q", dnsSrv)
 		}
 
 		dnsSrvAddr := dnsSrv[4:]
@@ -207,16 +207,14 @@ func FullResolve(label string) (net.IP, uint16, error) {
 		}
 		_, srvAddrs, err := r.LookupSRV(context.Background(), "", "", srvQuery)
 		if err != nil || len(srvAddrs) == 0 {
-			return nil, 0, fmt.Errorf("Failed to lookup SRV %q on %q", srvQuery, dnsSrvAddr)
+			return nil, 0, fmt.Errorf("failed to lookup SRV %q on %q", srvQuery, dnsSrvAddr)
 		}
 
 		// For effective resolution, allowing to utilize
 		// /etc/hosts, trim the trailing dot if present.
 		serviceLabel := srvAddrs[0].Target
 		servicePort := srvAddrs[0].Port
-		if strings.HasSuffix(serviceLabel, ".") {
-			serviceLabel = serviceLabel[:len(serviceLabel)-1]
-		}
+		serviceLabel = strings.TrimSuffix(serviceLabel, ".")
 
 		ip, err := simpleLookupHost(r, serviceLabel)
 		if err == nil && ip != nil {

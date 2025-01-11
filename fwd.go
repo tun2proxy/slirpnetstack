@@ -155,7 +155,7 @@ func LocalForward(state *State, s *stack.Stack, conn KaConn, targetAddr net.Addr
 		// connection had routable IP (unlike
 		// 127.0.0.1)... well... spoof it! The client might find it
 		// useful who launched the connection in the first place.
-		if proxyProtocol == false {
+		if !proxyProtocol {
 			srcIP = conn.RemoteAddr()
 		} else {
 			ppPrefix = "PP "
@@ -251,5 +251,4 @@ pperror:
 			err)
 	}
 	conn.Close()
-	return
 }
