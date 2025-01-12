@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -243,8 +244,22 @@ func netParseOrResolveIP(h string) (_ip net.IP, _resolved bool, _err error) {
 	return ip, true, err
 }
 
-func OutboundDial(srcIPs *SrcIPs, dst net.Addr) (net.Conn, error) {
+func OutboundDial(state *State, dst net.Addr) (net.Conn, error) {
+	srcIPs := &state.srcIPs
 	network := dst.Network()
+	dialer := &net.Dialer{}
+	if state.fwmark != 0 {
+		dialer.Control = func(network, address string, c syscall.RawConn) error {
+			var controlErr error
+			err := c.Control(func(fd uintptr) {
+				controlErr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, syscall.SO_MARK, state.fwmark)
+			})
+			if err != nil {
+				return err
+			}
+			return controlErr
+		}
+	}
 	if network == "tcp" {
 		dstTcp := dst.(*net.TCPAddr)
 		var srcTcp *net.TCPAddr
@@ -254,7 +269,8 @@ func OutboundDial(srcIPs *SrcIPs, dst net.Addr) (net.Conn, error) {
 		if srcIPs != nil && dstTcp.IP.To4() == nil && srcIPs.srcIPv6 != nil {
 			srcTcp = &net.TCPAddr{IP: srcIPs.srcIPv6}
 		}
-		return net.DialTCP(network, srcTcp, dstTcp)
+		dialer.LocalAddr = srcTcp
+		return dialer.Dial(network, dstTcp.String())
 	}
 	if network == "udp" {
 		dstUdp := dst.(*net.UDPAddr)
@@ -265,7 +281,8 @@ func OutboundDial(srcIPs *SrcIPs, dst net.Addr) (net.Conn, error) {
 		if srcIPs != nil && dstUdp.IP.To4() == nil && srcIPs.srcIPv6 != nil {
 			srcUdp = &net.UDPAddr{IP: srcIPs.srcIPv6}
 		}
-		return net.DialUDP(network, srcUdp, dstUdp)
+		dialer.LocalAddr = srcUdp
+		return dialer.Dial(network, dstUdp.String())
 	}
 	return nil, fmt.Errorf("not tcp/udp")
 }

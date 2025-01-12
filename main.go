@@ -49,6 +49,7 @@ var (
 	denyRange             IPPortRangeSlice
 	dnsTTL                time.Duration
 	readyFile             string
+	fwmark                int
 )
 
 func initFlagSet(flag *flag.FlagSet) {
@@ -73,6 +74,7 @@ func initFlagSet(flag *flag.FlagSet) {
 	flag.Var(&denyRange, "deny", "When routing, deny specified IP prefix and port range")
 	flag.DurationVar(&dnsTTL, "dns-ttl", time.Duration(5*time.Second), "For how long to cache DNS in case of dns labels passed to forward target.")
 	flag.StringVar(&readyFile, "ready-file", "", "After initialization, write a byte to this file to signal readiness")
+	flag.IntVar(&fwmark, "fwmark", 0, "Set fwmark on outbound packets")
 }
 
 func main() {
@@ -99,6 +101,8 @@ type State struct {
 	denyRange             IPPortRangeSlice
 
 	srcIPs SrcIPs
+
+	fwmark int
 }
 
 func Main(programName string, args []string) int {
@@ -170,6 +174,7 @@ func Main(programName string, args []string) int {
 	state.srcIPs.srcIPv6 = sourceIPv6.ip
 	state.allowRange = allowRange
 	state.denyRange = denyRange
+	state.fwmark = fwmark
 
 	logConnections = !quiet
 

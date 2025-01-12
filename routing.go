@@ -70,9 +70,9 @@ func UdpRoutingHandler(s *stack.Stack, state *State) func(*udp.ForwarderRequest)
 
 		go func() {
 			if rf != nil {
-				RemoteForward(conn, &state.srcIPs, rf)
+				RemoteForward(conn, state, rf)
 			} else {
-				RoutingForward(conn, &state.srcIPs, loc)
+				RoutingForward(conn, state, loc)
 			}
 		}()
 	}
@@ -118,22 +118,22 @@ func TcpRoutingHandler(state *State) func(*tcp.ForwarderRequest) {
 
 		go func() {
 			if rf != nil {
-				RemoteForward(conn, &state.srcIPs, rf)
+				RemoteForward(conn, state, rf)
 			} else {
-				RoutingForward(conn, &state.srcIPs, loc)
+				RoutingForward(conn, state, loc)
 			}
 		}()
 	}
 	return h
 }
 
-func RoutingForward(guest KaConn, srcIPs *SrcIPs, loc net.Addr) {
+func RoutingForward(guest KaConn, state *State, loc net.Addr) {
 	// Cache guest.RemoteAddr() because it becomes nil on
 	// guest.Close().
 	guestRemoteAddr := guest.RemoteAddr()
 
 	var pe ProxyError
-	xhost, err := OutboundDial(srcIPs, loc)
+	xhost, err := OutboundDial(state, loc)
 	if err != nil {
 		SetResetOnClose(guest)
 		guest.Close()
@@ -173,7 +173,7 @@ func RoutingForward(guest KaConn, srcIPs *SrcIPs, loc net.Addr) {
 	}
 }
 
-func RemoteForward(guest KaConn, srcIPs *SrcIPs, rf *FwdAddr) {
+func RemoteForward(guest KaConn, state *State, rf *FwdAddr) {
 	// Cache guest.RemoteAddr() because it becomes nil on
 	// guest.Close().
 	guestRemoteAddr := guest.RemoteAddr()
@@ -190,7 +190,7 @@ func RemoteForward(guest KaConn, srcIPs *SrcIPs, rf *FwdAddr) {
 			err)
 		return
 	}
-	xhost, err := OutboundDial(srcIPs, hostAddr)
+	xhost, err := OutboundDial(state, hostAddr)
 	if err != nil {
 		SetResetOnClose(guest)
 		guest.Close()
